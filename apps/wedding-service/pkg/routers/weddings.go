@@ -28,13 +28,13 @@ func createWedding(c *gin.Context) {
 	wedding.UpdatedAt = time.Now()
 
 	// save to db
-	db, err := db.ConnectToDB()
+	dbInstance, err := db.ConnectToDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "message": "failed to connect to database"})
 		return
 	}
-	defer db.Close()
-	err = db.InsertWedding(wedding)
+	defer dbInstance.Close()
+	err = dbInstance.InsertWedding(wedding)
 	if err != nil {
 		log.Printf("failed to insert wedding into table: %v\n", err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "message": "failed to insert wedding into table"})
