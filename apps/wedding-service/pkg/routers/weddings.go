@@ -2,9 +2,12 @@ package routers
 
 import (
 	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
+	"log"
 	"net/http"
 	"time"
 	"wedding-service/interfaces"
+	"wedding-service/pkg/db"
 )
 
 func InitWeddingsRouter(router *gin.Engine) {
@@ -24,10 +27,24 @@ func createWedding(c *gin.Context) {
 	wedding.CreatedAt = time.Now()
 	wedding.UpdatedAt = time.Now()
 
+	// save to db
+	db, err := db.ConnectToDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "message": "failed to connect to database"})
+		return
+	}
+	defer db.Close()
+	err = db.InsertWedding(wedding)
+	if err != nil {
+		log.Printf("failed to insert wedding into table: %v\n", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "message": "failed to insert wedding into table"})
+		return
+	}
+
+	log.Printf("inserted wedding into table: %v\n", wedding)
 	// send with kafka the new wedding
 	c.JSON(201, gin.H{
 		"message": "created wedding",
 		"wedding": wedding,
 	})
-
 }
