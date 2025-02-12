@@ -1,6 +1,6 @@
 package interfaces
 
 type Couple struct {
-	Person1 Person `json:"person_1"`
-	Person2 Person `json:"person_2"`
+	Person1 PersonDTO `json:"person_1"`
+	Person2 PersonDTO `json:"person_2"`
 }

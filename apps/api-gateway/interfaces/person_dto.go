@@ -8,7 +8,7 @@ const (
 	Other  GenderDTO = "other"
 )
 
-type Person struct {
+type PersonDTO struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Gender    GenderDTO `json:"gender"`

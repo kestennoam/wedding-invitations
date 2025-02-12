@@ -2,7 +2,10 @@ package routers
 
 import (
 	"api-gateway/interfaces"
+	"bytes"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 	"time"
 )
@@ -24,6 +27,35 @@ func getWeddingByID(c *gin.Context) {
 	})
 }
 
+func sendWeddingToWeddingsServiceWithREST(wedding interfaces.WeddingDTO) {
+	jsonBytes, err := json.Marshal(wedding)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	req, err := http.NewRequest("POST", "http://localhost:8081/weddings", bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+
+	log.Println(resp.Status)
+}
+
+func sendWeddingToWeddingsServiceWithKafka(wedding interfaces.WeddingDTO) {
+}
+
 func createWedding(c *gin.Context) {
 	var wedding interfaces.WeddingDTO
 	if err := c.BindJSON(&wedding); err != nil {
@@ -34,6 +66,7 @@ func createWedding(c *gin.Context) {
 	wedding.UpdatedAt = time.Now()
 
 	// send with kafka the new wedding
+	sendWeddingToWeddingsServiceWithREST(wedding)
 
 	c.JSON(201, gin.H{
 		"message": "create wedding",
