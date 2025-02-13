@@ -2,6 +2,7 @@ package routers
 
 import (
 	"api-gateway/interfaces"
+	"api-gateway/pkg/kafka"
 	"bytes"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,12 @@ func sendWeddingToWeddingsServiceWithREST(wedding interfaces.WeddingDTO) {
 }
 
 func sendWeddingToWeddingsServiceWithKafka(wedding interfaces.WeddingDTO) {
+	weddingInBytes, err := json.Marshal(wedding)
+	if err != nil {
+		log.Printf("error while converting wedding from json to bytes")
+		return
+	}
+	kafka.ProduceMessage("create_wedding", weddingInBytes)
 }
 
 func createWedding(c *gin.Context) {
@@ -66,7 +73,8 @@ func createWedding(c *gin.Context) {
 	wedding.UpdatedAt = time.Now()
 
 	// send with kafka the new wedding
-	sendWeddingToWeddingsServiceWithREST(wedding)
+	//sendWeddingToWeddingsServiceWithREST(wedding)
+	sendWeddingToWeddingsServiceWithKafka(wedding)
 
 	c.JSON(201, gin.H{
 		"message": "create wedding",
