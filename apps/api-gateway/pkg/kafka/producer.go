@@ -5,6 +5,10 @@ import (
 	"log"
 )
 
+// TODO interface and struct kafka producers and consumer
+// constructor producer url
+// TODO tests
+
 func ConnectProducer(config *sarama.Config) (sarama.SyncProducer, error) {
 	// [todo] change the addrs
 	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, config)

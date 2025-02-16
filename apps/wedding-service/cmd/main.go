@@ -10,5 +10,12 @@ func main() {
 	router := gin.Default()
 	routers.InitRouter(router)
 	// Listen on port 8080
-	router.Run(":8081")
+	router.Run("localhost:8081")
+
+	//topic := "create_wedding"
+	//wedding, err := kafka.ConsumeWeddingMessage(topic)
+	//if err != nil {
+	//	log.Fatalf("Failed to consume wedding message: %v", err)
+	//}
+	//log.Printf("Consumed wedding message: %+v", wedding)
 }
