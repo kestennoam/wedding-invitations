@@ -4,15 +4,24 @@ import (
 	"api-gateway/interfaces"
 	"api-gateway/pkg/kafka"
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"net/http"
 	"time"
+	"wedding-service/proto/gen/gen"
 )
 
 type WeddingsRouter struct {
 	r Router
+}
+
+type weddingHandler struct {
+	weddingServiceClient gen.WeddingServiceClient
 }
 
 func NewWeddingsRouter(r Router) *WeddingsRouter {
@@ -21,15 +30,23 @@ func NewWeddingsRouter(r Router) *WeddingsRouter {
 }
 
 func (wr *WeddingsRouter) setupRoutes(router *gin.Engine) {
+	conn, err := grpc.NewClient("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	// todo add close connection
+	h := &weddingHandler{weddingServiceClient: gen.NewWeddingServiceClient(conn)}
+
 	// TODO extract this outside of this function
 	weddingsRouter := router.Group("/weddings")
 	{
-		weddingsRouter.POST("/", createWedding)
+		weddingsRouter.POST("/", h.createWedding)
 
 	}
 }
 
-func createWedding(c *gin.Context) {
+func (h *weddingHandler) createWedding(c *gin.Context) {
+	fmt.Println("lior")
 	var wedding interfaces.WeddingDTO
 	if err := c.BindJSON(&wedding); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -38,13 +55,45 @@ func createWedding(c *gin.Context) {
 	wedding.CreatedAt = time.Now()
 	wedding.UpdatedAt = time.Now()
 
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
 	// send with kafka the new wedding
-	sendWeddingToWeddingsServiceWithREST(wedding)
+	weddingResponse, err := h.weddingServiceClient.CreateWedding(ctx, &gen.CreateWeddingRequest{
+		Wedding: &gen.Wedding{
+			Id: wedding.ID,
+			Couple: &gen.Couple{
+				Person_1: &gen.Person{
+					FirstName: wedding.Couple.Person1.FirstName,
+					LastName:  wedding.Couple.Person1.LastName,
+					Gender:    convertGenderDTOToGender(wedding.Couple.Person1.Gender),
+				},
+				Person_2: &gen.Person{
+					FirstName: wedding.Couple.Person2.FirstName,
+					LastName:  wedding.Couple.Person2.LastName,
+					Gender:    convertGenderDTOToGender(wedding.Couple.Person2.Gender),
+				},
+			},
+			Date:       timestamppb.New(wedding.Date),
+			Location:   wedding.Location,
+			GuestCount: int32(wedding.GuestCount),
+			CreatedAt:  timestamppb.New(wedding.CreatedAt),
+			UpdatedAt:  timestamppb.New(wedding.UpdatedAt),
+		},
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	//sendWeddingToWeddingsServiceWithREST(wedding)
+	fmt.Println("noam")
 	//sendWeddingToWeddingsServiceWithKafka(wedding)
 	// TODO change to grpc
 	c.JSON(201, gin.H{
-		"message": "create wedding",
-		"wedding": wedding,
+		"message":    "create wedding",
+		"wedding_id": weddingResponse.GetWedding().GetId(),
 	})
 }
 
@@ -81,4 +130,17 @@ func sendWeddingToWeddingsServiceWithKafka(wedding interfaces.WeddingDTO) {
 		return
 	}
 	kafka.ProduceMessage("create_wedding", weddingInBytes)
+}
+
+func convertGenderDTOToGender(genderDTO interfaces.GenderDTO) gen.Gender {
+	// Implement the conversion logic here
+	// This is a placeholder implementation
+	switch genderDTO {
+	case interfaces.Male:
+		return gen.Gender_MALE
+	case interfaces.Female:
+		return gen.Gender_FEMALE
+	default:
+		return gen.Gender_OTHER
+	}
 }
