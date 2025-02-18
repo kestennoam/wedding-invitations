@@ -1,8 +1,23 @@
 package main
 
-import "api-gateway/pkg/routers"
+import (
+	"api-gateway/pkg/routers"
+	"context"
+	"log"
+	"time"
+)
 
 func main() {
+	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	c := pb.NewWeddingServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
 	r := routers.NewRouter()
 	r.Run("localhost:8080")
 

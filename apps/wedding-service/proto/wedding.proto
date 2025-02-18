@@ -1,0 +1,35 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+option go_package = "wedding-invite-app/apps/wedding-service/proto";
+package wedding;
+
+enum Gender {
+  MALE = 0;
+  FEMALE = 1;
+  OTHER = 2;
+}
+
+message Person {
+  string first_name = 1;
+  string last_name = 2;
+  Gender gender = 3;
+}
+
+message Couple {
+  Person person_1 = 1;
+  Person person_2 = 2;
+}
+
+message Wedding {
+  string id = 1;
+  Couple couple = 2;
+  google.protobuf.Timestamp date = 3;
+  string location = 4;
+  int32 guest_count = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+service WeddingService {
+  rpc CreateWedding(Wedding) returns (Wedding) {}
+}
